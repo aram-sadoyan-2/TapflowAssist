@@ -27,6 +27,32 @@ class EditorViewModel(
     )
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
+    fun loadPreset(presetId: Long) {
+        if (presetId <= 0L) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            val preset = repository.getPresetById(presetId)
+
+            if (preset != null) {
+                _uiState.value = EditorUiState(
+                    presetId = preset.id,
+                    name = preset.name,
+                    type = preset.type,
+                    intervalMs = preset.intervalMs.toString(),
+                    repeatCount = preset.repeatCount.toString(),
+                    holdDurationMs = preset.holdDurationMs.toString(),
+                    points = preset.points,
+                    isLoading = false,
+                    isSaving = false
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
     fun updateName(value: String) {
         _uiState.value = _uiState.value.copy(name = value)
     }
@@ -55,28 +81,25 @@ class EditorViewModel(
 
     fun savePreset(onSaved: (Long) -> Unit = {}) {
         val state = _uiState.value
-        val interval = state.intervalMs.toLongOrNull() ?: 1000L
-        val repeat = state.repeatCount.toIntOrNull() ?: 1
-        val hold = state.holdDurationMs.toLongOrNull() ?: 0L
 
         val preset = TouchPreset(
             id = state.presetId,
-            name = state.name,
+            name = state.name.ifBlank { "New Preset" },
             type = state.type,
-            intervalMs = interval,
-            repeatCount = repeat,
-            holdDurationMs = hold,
+            intervalMs = state.intervalMs.toLongOrNull() ?: 1000L,
+            repeatCount = state.repeatCount.toIntOrNull() ?: 1,
+            holdDurationMs = state.holdDurationMs.toLongOrNull() ?: 0L,
             points = state.points
         )
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
-            val id = repository.savePreset(preset)
+            val savedId = repository.savePreset(preset)
             _uiState.value = _uiState.value.copy(
-                isSaving = false,
-                presetId = id
+                presetId = savedId,
+                isSaving = false
             )
-            onSaved(id)
+            onSaved(savedId)
         }
     }
 

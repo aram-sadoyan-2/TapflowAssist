@@ -21,7 +21,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,10 +51,17 @@ import com.algorithm.tapflow.assist.ui.viewmodel.EditorViewModel
 @Composable
 fun EditorScreen(
     viewModel: EditorViewModel,
+    presetId: Long?,
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var expanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(presetId) {
+        if (presetId != null && presetId > 0L) {
+            viewModel.loadPreset(presetId)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -58,14 +71,28 @@ fun EditorScreen(
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         AppTopBar(
-            title = "Edit Preset",
+            title = if ((presetId ?: 0L) > 0L) "Edit Preset" else "New Preset",
             showBack = true,
             onBack = onBack
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (uiState.isLoading) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Loading preset...",
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            return
+        }
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -202,11 +229,17 @@ fun EditorScreen(
             item {
                 PrimaryButton(
                     text = if (uiState.isSaving) "Saving..." else "Save Preset",
-                    onClick = { viewModel.savePreset() }
+                    onClick = {
+                        viewModel.savePreset {
+                            onBack()
+                        }
+                    }
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }

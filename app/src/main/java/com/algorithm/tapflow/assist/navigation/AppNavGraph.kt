@@ -3,9 +3,11 @@ package com.algorithm.tapflow.assist.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.algorithm.tapflow.assist.service.ServiceLocator
 import com.algorithm.tapflow.assist.ui.screens.editor.EditorScreen
 import com.algorithm.tapflow.assist.ui.screens.home.HomeScreen
@@ -15,6 +17,7 @@ import com.algorithm.tapflow.assist.ui.screens.settings.SettingsScreen
 import com.algorithm.tapflow.assist.ui.viewmodel.EditorViewModel
 import com.algorithm.tapflow.assist.ui.viewmodel.HomeViewModel
 import com.algorithm.tapflow.assist.ui.viewmodel.PermissionsViewModel
+import com.algorithm.tapflow.assist.ui.viewmodel.PresetsViewModel
 
 @Composable
 fun AppNavGraph() {
@@ -33,20 +36,39 @@ fun AppNavGraph() {
 
             HomeScreen(
                 viewModel = vm,
-                onCreateNew = { navController.navigate(Routes.Editor.route) },
-                onOpenPermissions = { navController.navigate(Routes.Permissions.route) },
-                onOpenPresets = { navController.navigate(Routes.Presets.route) },
-                onOpenSettings = { navController.navigate(Routes.Settings.route) }
+                onCreateNew = {
+                    navController.navigate(Routes.Editor.createRoute())
+                },
+                onOpenPermissions = {
+                    navController.navigate(Routes.Permissions.route)
+                },
+                onOpenPresets = {
+                    navController.navigate(Routes.Presets.route)
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.Settings.route)
+                }
             )
         }
 
-        composable(Routes.Editor.route) {
+        composable(
+            route = Routes.Editor.route,
+            arguments = listOf(
+                navArgument("presetId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
             val vm: EditorViewModel = viewModel(
                 factory = EditorViewModel.factory(repository)
             )
 
+            val presetId = backStackEntry.arguments?.getLong("presetId")?.takeIf { it > 0L }
+
             EditorScreen(
                 viewModel = vm,
+                presetId = presetId,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -61,11 +83,23 @@ fun AppNavGraph() {
         }
 
         composable(Routes.Presets.route) {
-            PresetsScreen(onBack = { navController.popBackStack() })
+            val vm: PresetsViewModel = viewModel(
+                factory = PresetsViewModel.factory(repository)
+            )
+
+            PresetsScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onPresetClick = { presetId ->
+                    navController.navigate(Routes.Editor.createRoute(presetId))
+                }
+            )
         }
 
         composable(Routes.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

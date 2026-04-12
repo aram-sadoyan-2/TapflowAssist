@@ -12,7 +12,9 @@ class PresetRepositoryImpl(
 ) : PresetRepository {
 
     override fun observePresets(): Flow<List<TouchPreset>> {
-        return dao.observePresets().map { list -> list.map { it.toDomain() } }
+        return dao.observePresets().map { list ->
+            list.map { it.toDomain() }
+        }
     }
 
     override suspend fun getPresetById(id: Long): TouchPreset? {
@@ -20,7 +22,12 @@ class PresetRepositoryImpl(
     }
 
     override suspend fun savePreset(preset: TouchPreset): Long {
-        return dao.insertPreset(preset.toEntity())
+        return if (preset.id == 0L) {
+            dao.insertPreset(preset.toEntity())
+        } else {
+            dao.updatePreset(preset.toEntity())
+            preset.id
+        }
     }
 
     override suspend fun deletePreset(id: Long) {
