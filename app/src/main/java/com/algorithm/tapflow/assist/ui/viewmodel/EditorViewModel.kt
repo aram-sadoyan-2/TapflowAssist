@@ -44,6 +44,7 @@ class EditorViewModel(
                     repeatCount = preset.repeatCount.toString(),
                     holdDurationMs = preset.holdDurationMs.toString(),
                     points = preset.points,
+                    selectedPointId = preset.points.firstOrNull()?.id,
                     isLoading = false,
                     isSaving = false
                 )
@@ -73,9 +74,43 @@ class EditorViewModel(
         _uiState.value = _uiState.value.copy(type = type)
     }
 
-    fun addPoint(point: TouchPoint) {
+    fun selectPoint(pointId: Int?) {
+        _uiState.value = _uiState.value.copy(selectedPointId = pointId)
+    }
+
+    fun addPointAt(x: Float, y: Float) {
+        val state = _uiState.value
+        val nextId = (state.points.maxOfOrNull { it.id } ?: 0) + 1
+
+        val newPoint = TouchPoint(
+            id = nextId,
+            x = x,
+            y = y,
+            delayBeforeMs = 0L
+        )
+
+        _uiState.value = state.copy(
+            points = state.points + newPoint,
+            selectedPointId = newPoint.id
+        )
+    }
+
+    fun movePoint(pointId: Int, x: Float, y: Float) {
+        val state = _uiState.value
+        _uiState.value = state.copy(
+            points = state.points.map { point ->
+                if (point.id == pointId) point.copy(x = x, y = y) else point
+            }
+        )
+    }
+
+    fun removeSelectedPoint() {
+        val selectedId = _uiState.value.selectedPointId ?: return
+        val updated = _uiState.value.points.filterNot { it.id == selectedId }
+
         _uiState.value = _uiState.value.copy(
-            points = _uiState.value.points + point
+            points = updated,
+            selectedPointId = updated.lastOrNull()?.id
         )
     }
 

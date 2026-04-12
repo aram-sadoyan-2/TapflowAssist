@@ -11,6 +11,7 @@ data class EditorUiState(
     val repeatCount: String = "10",
     val holdDurationMs: String = "0",
     val points: List<TouchPoint> = emptyList(),
+    val selectedPointId: Int? = null,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false
 )
