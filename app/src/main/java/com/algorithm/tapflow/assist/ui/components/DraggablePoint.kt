@@ -63,6 +63,7 @@ fun DraggablePoint(
                 color = if (isSelected) SecondaryPurple else PrimaryBlue,
                 shape = CircleShape
             )
+
             .border(
                 width = if (isSelected) 2.dp else 0.dp,
                 color = Color.White,
