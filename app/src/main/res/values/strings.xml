@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">Tapflow Assist</string>
+    <string name="app_name">TapFlow Assist</string>
+    <string name="accessibility_service_description">Allows user-started touch assistance gestures.</string>
+    <string name="accessibility_service_summary">User-controlled touch helper for taps, long press, and swipe actions.</string>
 </resources>

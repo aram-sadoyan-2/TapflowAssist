@@ -9,12 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.algorithm.tapflow.assist.permissions.PermissionHelpers
 import com.algorithm.tapflow.assist.ui.components.AppTopBar
 import com.algorithm.tapflow.assist.ui.components.GlassCard
 import com.algorithm.tapflow.assist.ui.components.PrimaryButton
@@ -22,14 +27,21 @@ import com.algorithm.tapflow.assist.ui.components.SettingRow
 import com.algorithm.tapflow.assist.ui.theme.AppBackground
 import com.algorithm.tapflow.assist.ui.theme.TextPrimary
 import com.algorithm.tapflow.assist.ui.theme.TextSecondary
+import com.algorithm.tapflow.assist.ui.viewmodel.PermissionsViewModel
 
 @Composable
 fun PermissionsScreen(
+    viewModel: PermissionsViewModel,
     onBack: () -> Unit
 ) {
-    var overlayEnabled by remember { mutableStateOf(false) }
-    var accessibilityEnabled by remember { mutableStateOf(false) }
-    var batteryIgnored by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
+    DisposableEffect(Unit) {
+        viewModel.setOverlayGranted(PermissionHelpers.hasOverlayPermission(context))
+        viewModel.setBatteryIgnored(PermissionHelpers.isIgnoringBatteryOptimizations(context))
+        onDispose { }
+    }
 
     Column(
         modifier = Modifier
@@ -45,9 +57,7 @@ fun PermissionsScreen(
             onBack = onBack
         )
 
-        GlassCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Enable Accessibility",
                 color = TextPrimary,
@@ -68,29 +78,29 @@ fun PermissionsScreen(
             SettingRow(
                 title = "Overlay Permission",
                 subtitle = "Show floating controls above apps.",
-                checked = overlayEnabled,
-                onCheckedChange = { overlayEnabled = it }
+                checked = uiState.overlayGranted,
+                onCheckedChange = { PermissionHelpers.openOverlaySettings(context) }
             )
 
             SettingRow(
                 title = "Accessibility Service",
                 subtitle = "Enable touch assistance actions.",
-                checked = accessibilityEnabled,
-                onCheckedChange = { accessibilityEnabled = it }
+                checked = uiState.accessibilityGranted,
+                onCheckedChange = { PermissionHelpers.openAccessibilitySettings(context) }
             )
 
             SettingRow(
                 title = "Battery Optimization",
                 subtitle = "Allow better session stability.",
-                checked = batteryIgnored,
-                onCheckedChange = { batteryIgnored = it }
+                checked = uiState.batteryOptimizationIgnored,
+                onCheckedChange = { PermissionHelpers.openBatteryOptimizationSettings(context) }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
             PrimaryButton(
-                text = "Enable Service",
-                onClick = {}
+                text = "Open Settings",
+                onClick = { PermissionHelpers.openAccessibilitySettings(context) }
             )
         }
     }
