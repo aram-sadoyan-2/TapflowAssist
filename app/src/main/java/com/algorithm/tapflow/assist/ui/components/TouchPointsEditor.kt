@@ -8,16 +8,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.algorithm.tapflow.assist.data.model.TouchPoint
 import com.algorithm.tapflow.assist.ui.theme.AppCardSecondary
@@ -31,6 +35,7 @@ fun TouchPointsEditor(
     onAddPoint: (Float, Float) -> Unit,
     onMovePoint: (Int, Float, Float) -> Unit,
     onSelectPoint: (Int?) -> Unit,
+    onDragStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -40,10 +45,24 @@ fun TouchPointsEditor(
     var canvasWidth by remember { mutableIntStateOf(0) }
     var canvasHeight by remember { mutableIntStateOf(0) }
 
+    val blockParentScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset = available
+
+            override suspend fun onPreFling(
+                available: Velocity
+            ): Velocity = available
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(320.dp)
+            .nestedScroll(blockParentScroll)
             .background(AppCardSecondary, RoundedCornerShape(24.dp))
             .onSizeChanged {
                 canvasWidth = it.width
@@ -89,6 +108,8 @@ fun TouchPointsEditor(
                 canvasWidth = canvasWidth.toFloat(),
                 canvasHeight = canvasHeight.toFloat(),
                 onTap = { onSelectPoint(point.id) },
+                onDragStart = { onDragStateChanged(true) },
+                onDragEnd = { onDragStateChanged(false) },
                 onDrag = { newX, newY ->
                     onMovePoint(point.id, newX, newY)
                 }

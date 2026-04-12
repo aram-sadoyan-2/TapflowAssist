@@ -4,7 +4,6 @@ import android.view.MotionEvent
 import android.view.ViewParent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -18,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -39,6 +37,8 @@ fun DraggablePoint(
     canvasWidth: Float,
     canvasHeight: Float,
     onTap: () -> Unit,
+    onDragStart: () -> Unit,
+    onDragEnd: () -> Unit,
     onDrag: (Float, Float) -> Unit
 ) {
     val density = LocalDensity.current
@@ -47,7 +47,7 @@ fun DraggablePoint(
 
     var lastRawX by remember { mutableFloatStateOf(0f) }
     var lastRawY by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableFloatStateOf(0f) } // 0f=false, 1f=true
+    var dragging by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = Modifier
@@ -72,15 +72,16 @@ fun DraggablePoint(
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         onTap()
-                        isDragging = 1f
+                        onDragStart()
+                        dragging = 1f
                         lastRawX = event.rawX
                         lastRawY = event.rawY
-                        requestDisallowIntercept(view.parent, true)
+                        requestDisallowInterceptRecursively(view.parent, true)
                         true
                     }
 
                     MotionEvent.ACTION_MOVE -> {
-                        if (isDragging == 1f) {
+                        if (dragging == 1f) {
                             val dx = event.rawX - lastRawX
                             val dy = event.rawY - lastRawY
 
@@ -97,18 +98,14 @@ fun DraggablePoint(
 
                     MotionEvent.ACTION_UP,
                     MotionEvent.ACTION_CANCEL -> {
-                        isDragging = 0f
-                        requestDisallowIntercept(view.parent, false)
+                        dragging = 0f
+                        onDragEnd()
+                        requestDisallowInterceptRecursively(view.parent, false)
                         true
                     }
 
                     else -> false
                 }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onTap() }
-                )
             },
         contentAlignment = Alignment.Center
     ) {
@@ -119,6 +116,10 @@ fun DraggablePoint(
     }
 }
 
-private fun requestDisallowIntercept(parent: ViewParent?, disallow: Boolean) {
-    parent?.requestDisallowInterceptTouchEvent(disallow)
+private fun requestDisallowInterceptRecursively(parent: ViewParent?, disallow: Boolean) {
+    var current = parent
+    while (current != null) {
+        current.requestDisallowInterceptTouchEvent(disallow)
+        current = current.parent
+    }
 }
