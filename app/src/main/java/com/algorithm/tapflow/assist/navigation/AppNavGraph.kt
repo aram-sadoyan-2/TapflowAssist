@@ -100,6 +100,12 @@ fun AppNavGraph() {
                 },
                 onStartPreset = { presetId ->
                     val preset = uiState.presets.firstOrNull { it.id == presetId } ?: return@PresetsScreen
+
+                    if (!com.algorithm.tapflow.assist.service.AccessibilityHelper.isTouchServiceEnabled(context)) {
+                        com.algorithm.tapflow.assist.service.AccessibilityHelper.openAccessibilitySettings(context)
+                        return@PresetsScreen
+                    }
+
                     FloatingOverlayStarter.start(context, preset)
 
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({

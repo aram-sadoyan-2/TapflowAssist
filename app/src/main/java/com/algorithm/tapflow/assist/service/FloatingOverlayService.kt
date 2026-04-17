@@ -87,8 +87,11 @@ class FloatingOverlayService : Service() {
 
             val service = TouchAccessibilityService.instance
             if (service == null) {
-                Toast.makeText(this, "Enable accessibility service first", Toast.LENGTH_SHORT).show()
-                Log.d("TapFlowRun", "Play pressed but accessibility service is null")
+                Toast.makeText(
+                    this,
+                    "Accessibility service is not connected",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
                 return@actionText
             }
 
