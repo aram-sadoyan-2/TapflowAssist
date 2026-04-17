@@ -295,8 +295,13 @@ fun EditorScreen(
                         )
                     } else {
                         uiState.points.forEachIndexed { index, point ->
+                            val displayIndex = when (uiState.type) {
+                                GestureType.SWIPE -> index + 1
+                                else -> 1
+                            }
+
                             TouchPointItem(
-                                index = index + 1,
+                                index = displayIndex,
                                 point = point
                             )
                         }
@@ -305,6 +310,16 @@ fun EditorScreen(
             }
 
             item {
+                if (uiState.errorMessage != null) {
+                    Text(
+                        text = uiState.errorMessage ?: "",
+                        color = androidx.compose.ui.graphics.Color.Red,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 PrimaryButton(
                     text = if (uiState.isSaving) "Saving..." else "Save Preset",
                     onClick = {

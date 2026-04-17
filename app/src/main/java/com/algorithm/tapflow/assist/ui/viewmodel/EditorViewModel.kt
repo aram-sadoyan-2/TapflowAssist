@@ -49,43 +49,69 @@ class EditorViewModel(
     }
 
     fun updateName(value: String) {
-        _uiState.value = _uiState.value.copy(name = value)
+        _uiState.update { it.copy(name = value, errorMessage = null) }
     }
 
     fun updateInterval(value: String) {
-        _uiState.value = _uiState.value.copy(intervalMs = value.filter(Char::isDigit))
+        _uiState.update {
+            it.copy(
+                intervalMs = value.filter(Char::isDigit),
+                errorMessage = null
+            )
+        }
     }
 
     fun updateRepeat(value: String) {
-        _uiState.value = _uiState.value.copy(repeatCount = value.filter(Char::isDigit))
+        _uiState.update {
+            it.copy(
+                repeatCount = value.filter(Char::isDigit),
+                errorMessage = null
+            )
+        }
     }
 
     fun updateHold(value: String) {
-        _uiState.value = _uiState.value.copy(holdDurationMs = value.filter(Char::isDigit))
+        _uiState.update {
+            it.copy(
+                holdDurationMs = value.filter(Char::isDigit),
+                errorMessage = null
+            )
+        }
     }
 
     fun updateType(type: GestureType) {
-        _uiState.value = _uiState.value.copy(type = type)
+        _uiState.update { current ->
+            val adjustedPoints = enforcePointLimit(type, current.points)
+            current.copy(
+                type = type,
+                points = adjustedPoints,
+                selectedPointId = adjustedPoints.firstOrNull()?.id,
+                errorMessage = null
+            )
+        }
     }
 
     fun selectPoint(pointId: Int?) {
-        _uiState.value = _uiState.value.copy(selectedPointId = pointId)
+        _uiState.update { it.copy(selectedPointId = pointId) }
     }
 
     fun clearAllPoints() {
-        _uiState.update { current ->
-            current.copy(
+        _uiState.update {
+            it.copy(
                 points = emptyList(),
-                selectedPointId = null
+                selectedPointId = null,
+                errorMessage = null
             )
         }
     }
 
     fun replaceAllPoints(newPoints: List<TouchPoint>) {
         _uiState.update { current ->
+            val adjustedPoints = enforcePointLimit(current.type, newPoints)
             current.copy(
-                points = newPoints,
-                selectedPointId = newPoints.firstOrNull()?.id
+                points = adjustedPoints,
+                selectedPointId = adjustedPoints.firstOrNull()?.id,
+                errorMessage = null
             )
         }
     }
@@ -101,14 +127,26 @@ class EditorViewModel(
             delayBeforeMs = 0L
         )
 
+        val updatedPoints = enforcePointLimit(
+            state.type,
+            state.points + newPoint
+        )
+
         _uiState.value = state.copy(
-            points = state.points + newPoint,
-            selectedPointId = newPoint.id
+            points = updatedPoints,
+            selectedPointId = updatedPoints.lastOrNull()?.id,
+            errorMessage = null
         )
     }
 
     fun savePreset(onSaved: (Long) -> Unit = {}) {
         val state = _uiState.value
+        val validationError = validatePoints(state.type, state.points)
+
+        if (validationError != null) {
+            _uiState.update { it.copy(errorMessage = validationError) }
+            return
+        }
 
         val preset = TouchPreset(
             id = state.presetId,
@@ -121,13 +159,52 @@ class EditorViewModel(
         )
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true)
+            _uiState.value = _uiState.value.copy(
+                isSaving = true,
+                errorMessage = null
+            )
+
             val savedId = repository.savePreset(preset)
+
             _uiState.value = _uiState.value.copy(
                 presetId = savedId,
                 isSaving = false
             )
+
             onSaved(savedId)
+        }
+    }
+
+    private fun enforcePointLimit(
+        type: GestureType,
+        points: List<TouchPoint>
+    ): List<TouchPoint> {
+        return when (type) {
+            GestureType.SINGLE_TAP,
+            GestureType.LONG_PRESS -> points.take(1)
+
+            GestureType.SWIPE -> points.take(2)
+
+            GestureType.MULTI_TAP -> points
+        }
+    }
+
+    private fun validatePoints(
+        type: GestureType,
+        points: List<TouchPoint>
+    ): String? {
+        return when (type) {
+            GestureType.SINGLE_TAP ->
+                if (points.size != 1) "Single tap requires exactly 1 point." else null
+
+            GestureType.LONG_PRESS ->
+                if (points.size != 1) "Long press requires exactly 1 point." else null
+
+            GestureType.SWIPE ->
+                if (points.size != 2) "Swipe requires exactly 2 points." else null
+
+            GestureType.MULTI_TAP ->
+                if (points.isEmpty()) "Multi tap requires at least 1 point." else null
         }
     }
 

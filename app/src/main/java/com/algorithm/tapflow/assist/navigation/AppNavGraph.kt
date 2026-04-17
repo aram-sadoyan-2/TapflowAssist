@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.algorithm.tapflow.assist.data.model.GestureType
 import com.algorithm.tapflow.assist.service.FloatingOverlayStarter
 import com.algorithm.tapflow.assist.service.ServiceLocator
 import com.algorithm.tapflow.assist.ui.screens.editor.EditorScreen
@@ -105,6 +106,15 @@ fun AppNavGraph() {
                         com.algorithm.tapflow.assist.service.AccessibilityHelper.openAccessibilitySettings(context)
                         return@PresetsScreen
                     }
+
+                    val isValid = when (preset.type) {
+                        GestureType.SINGLE_TAP -> preset.points.size == 1
+                        GestureType.LONG_PRESS -> preset.points.size == 1
+                        GestureType.SWIPE -> preset.points.size == 2
+                        GestureType.MULTI_TAP -> preset.points.isNotEmpty()
+                    }
+
+                    if (!isValid) return@PresetsScreen
 
                     FloatingOverlayStarter.start(context, preset)
 

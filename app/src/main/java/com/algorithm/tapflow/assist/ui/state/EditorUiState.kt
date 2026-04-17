@@ -13,5 +13,6 @@ data class EditorUiState(
     val points: List<TouchPoint> = emptyList(),
     val selectedPointId: Int? = null,
     val isLoading: Boolean = false,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null
 )
