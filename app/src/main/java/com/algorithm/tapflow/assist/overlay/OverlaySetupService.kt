@@ -22,14 +22,14 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ServiceLifecycleDispatcher
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import com.algorithm.tapflow.assist.R
-
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.algorithm.tapflow.assist.R
+import com.algorithm.tapflow.assist.data.model.GestureType
 
 class OverlaySetupService : Service(),
     LifecycleOwner,
@@ -50,7 +50,12 @@ class OverlaySetupService : Service(),
         get() = savedStateController.savedStateRegistry
 
     private lateinit var windowManager: WindowManager
-    private var overlayView: ComposeView? = null
+
+    private var controlPanelView: ComposeView? = null
+    private var controlPanelParams: WindowManager.LayoutParams? = null
+
+    private val pointViews = linkedMapOf<Long, ComposeView>()
+    private val pointParams = linkedMapOf<Long, WindowManager.LayoutParams>()
 
     override fun onCreate() {
         lifecycleDispatcher.onServicePreSuperOnCreate()
@@ -75,7 +80,9 @@ class OverlaySetupService : Service(),
         )
 
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        showOverlay()
+
+        showControlPanel()
+        syncPointViews()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,51 +90,135 @@ class OverlaySetupService : Service(),
         return START_NOT_STICKY
     }
 
-    private fun showOverlay() {
-        if (overlayView != null) return
+    private fun showControlPanel() {
+        if (controlPanelView != null) return
 
-        overlayView = ComposeView(this).apply {
+        val view = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@OverlaySetupService)
             setViewTreeViewModelStoreOwner(this@OverlaySetupService)
             setViewTreeSavedStateRegistryOwner(this@OverlaySetupService)
 
             setContent {
-                val points by OverlaySetupSession.points.collectAsState()
                 val type by OverlaySetupSession.gestureType.collectAsState()
 
-                OverlaySetupContent(
-                    type = type,
-                    points = points,
-                    onAddPoint = { OverlaySetupSession.addPoint() },
-                    onDeleteLast = { OverlaySetupSession.deleteLastPoint() },
+                DraggableControlPanelWindow(
+                    showAddRemove = type != GestureType.SINGLE_TAP && type != GestureType.LONG_PRESS,
+                    onAddPoint = {
+                        OverlaySetupSession.addPoint()
+                        syncPointViews()
+                    },
+                    onDeleteLast = {
+                        OverlaySetupSession.deleteLastPoint()
+                        syncPointViews()
+                    },
                     onSave = { savePointsAndClose() },
                     onClose = {
                         bringAppToFront()
                         stopSelf()
                     },
-                    onMovePoint = { id, x, y ->
-                        OverlaySetupSession.movePoint(id, x, y)
-                    },
-                    onReplaceSinglePoint = { x, y ->
-                        OverlaySetupSession.replaceWithSinglePoint(x, y)
+                    onPanelMoved = { x, y ->
+                        controlPanelParams?.let { params ->
+                            params.x += x
+                            params.y += y
+                            controlPanelView?.let { v -> windowManager.updateViewLayout(v, params) }
+                        }
                     }
                 )
             }
         }
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
+            x = 40
+            y = 120
         }
 
-        windowManager.addView(overlayView, params)
+        controlPanelView = view
+        controlPanelParams = params
+        windowManager.addView(view, params)
+    }
+
+    private fun syncPointViews() {
+        val currentPoints = OverlaySetupSession.points.value
+        val currentIds = currentPoints.map { it.id }.toSet()
+
+        val idsToRemove = pointViews.keys.filter { it !in currentIds }
+        idsToRemove.forEach { id ->
+            pointViews.remove(id)?.let { runCatching { windowManager.removeView(it) } }
+            pointParams.remove(id)
+        }
+
+        currentPoints.forEachIndexed { index, point ->
+            val existingView = pointViews[point.id]
+            val type = OverlaySetupSession.gestureType.value
+            val singlePointMode = type == GestureType.SINGLE_TAP || type == GestureType.LONG_PRESS
+
+            if (existingView == null) {
+                val view = ComposeView(this).apply {
+                    setViewTreeLifecycleOwner(this@OverlaySetupService)
+                    setViewTreeViewModelStoreOwner(this@OverlaySetupService)
+                    setViewTreeSavedStateRegistryOwner(this@OverlaySetupService)
+
+                    setContent {
+                        PointWindow(
+                            label = if (singlePointMode) null else "${index + 1}",
+                            onMoved = { dx, dy ->
+                                pointParams[point.id]?.let { params ->
+                                    params.x += dx
+                                    params.y += dy
+                                    OverlaySetupSession.movePoint(point.id, params.x, params.y)
+                                    windowManager.updateViewLayout(this, params)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                val params = WindowManager.LayoutParams(
+                    dpToPx(58),
+                    dpToPx(58),
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    x = point.x
+                    y = point.y
+                }
+
+                pointViews[point.id] = view
+                pointParams[point.id] = params
+                windowManager.addView(view, params)
+            } else {
+                pointParams[point.id]?.let { params ->
+                    params.x = point.x
+                    params.y = point.y
+                    runCatching { windowManager.updateViewLayout(existingView, params) }
+                }
+
+                existingView.setContent {
+                    PointWindow(
+                        label = if (singlePointMode) null else "${index + 1}",
+                        onMoved = { dx, dy ->
+                            pointParams[point.id]?.let { p ->
+                                p.x += dx
+                                p.y += dy
+                                OverlaySetupSession.movePoint(point.id, p.x, p.y)
+                                windowManager.updateViewLayout(existingView, p)
+                            }
+                        }
+                    )
+                }
+            }
+        }
     }
 
     private fun savePointsAndClose() {
@@ -144,11 +235,31 @@ class OverlaySetupService : Service(),
         stopSelf()
     }
 
-    override fun onDestroy() {
-        overlayView?.let {
-            runCatching { windowManager.removeView(it) }
+    private fun bringAppToFront() {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+            )
         }
-        overlayView = null
+        if (launchIntent != null) {
+            startActivity(launchIntent)
+        }
+    }
+
+    private fun dpToPx(dp: Int): Int =
+        (dp * resources.displayMetrics.density).toInt()
+
+    override fun onDestroy() {
+        controlPanelView?.let { runCatching { windowManager.removeView(it) } }
+        controlPanelView = null
+        controlPanelParams = null
+
+        pointViews.values.forEach { runCatching { windowManager.removeView(it) } }
+        pointViews.clear()
+        pointParams.clear()
+
         vmStore.clear()
         lifecycleDispatcher.onServicePreSuperOnDestroy()
         super.onDestroy()
@@ -174,19 +285,6 @@ class OverlaySetupService : Service(),
             )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun bringAppToFront() {
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-            )
-        }
-        if (launchIntent != null) {
-            startActivity(launchIntent)
         }
     }
 
