@@ -176,36 +176,33 @@ fun EditorScreen(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    Log.d("dwd", "dsdsd")
 
-//                    PrimaryButton(
-//                        text = "Setup Points Over Apps",
-//                        onClick = {
-//                            Log.d("dwd", "Button clicked")
-//
-//                            if (!OverlayStarter.canDrawOverlays(context)) {
-//                                Log.d("dwd", "Overlay permission missing, opening settings")
-//                                OverlayStarter.openOverlayPermission(context)
-//                            } else {
-//                                Log.d("dwd", "Overlay permission granted, starting service")
-//
-//                                OverlaySetupSession.reset()
-//
-//                                uiState.points.forEach { point ->
-//                                    OverlaySetupSession.addPoint(
-//                                        defaultX = point.x.toInt(),
-//                                        defaultY = point.y.toInt()
-//                                    )
-//                                }
-//
-//                                if (uiState.points.isEmpty()) {
-//                                    OverlaySetupSession.addPoint(300, 500)
-//                                }
-//
-//                                OverlayStarter.startOverlay(context)
-//                            }
-//                        }
-//                    )
+                    PrimaryButton(
+                        text = "Setup Points Over Apps",
+                        onClick = {
+                            if (!OverlayStarter.canDrawOverlays(context)) {
+                                Log.d("dwd", "Overlay permission missing, opening settings")
+                                OverlayStarter.openOverlayPermission(context)
+                            } else {
+                                Log.d("dwd", "Overlay permission granted, starting service")
+
+                                OverlaySetupSession.reset()
+
+                                uiState.points.forEach { point ->
+                                    OverlaySetupSession.addPoint(
+                                        defaultX = point.x.toInt(),
+                                        defaultY = point.y.toInt()
+                                    )
+                                }
+
+                                if (uiState.points.isEmpty()) {
+                                    OverlaySetupSession.addPoint(300, 500)
+                                }
+
+                                OverlayStarter.startOverlay(context)
+                            }
+                        }
+                    )
                 }
             }
 

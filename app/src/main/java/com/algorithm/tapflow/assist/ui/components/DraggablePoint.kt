@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -30,27 +32,30 @@ fun DraggablePoint(
     startY: Int,
     onMoved: (Int, Int) -> Unit
 ) {
+    val pointSize = 58.dp
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+
+    val maxX = with(density) { configuration.screenWidthDp.dp.toPx() - pointSize.toPx() }
+    val maxY = with(density) { configuration.screenHeightDp.dp.toPx() - pointSize.toPx() }
+
     var offsetX by remember(startX) { mutableFloatStateOf(startX.toFloat()) }
     var offsetY by remember(startY) { mutableFloatStateOf(startY.toFloat()) }
 
     Box(
         modifier = Modifier
             .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-            .size(58.dp)
+            .size(pointSize)
             .background(Color(0xFFE53935), CircleShape)
-            .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
-            .pointerInput(Unit) {
+            .border(2.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+            .pointerInput(maxX, maxY) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        offsetX += dragAmount.x
-                        offsetY += dragAmount.y
-                        onMoved(offsetX.roundToInt(), offsetY.roundToInt())
-                    },
-                    onDragEnd = {
-                        onMoved(offsetX.roundToInt(), offsetY.roundToInt())
-                    },
-                    onDragCancel = {
+
+                        offsetX = (offsetX + dragAmount.x).coerceIn(0f, maxX)
+                        offsetY = (offsetY + dragAmount.y).coerceIn(0f, maxY)
+
                         onMoved(offsetX.roundToInt(), offsetY.roundToInt())
                     }
                 )
