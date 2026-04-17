@@ -1,6 +1,5 @@
 package com.algorithm.tapflow.assist.ui.screens.editor
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,7 +45,6 @@ import com.algorithm.tapflow.assist.ui.components.GlassCard
 import com.algorithm.tapflow.assist.ui.components.PrimaryButton
 import com.algorithm.tapflow.assist.ui.components.SectionTitle
 import com.algorithm.tapflow.assist.ui.components.TouchPointItem
-import com.algorithm.tapflow.assist.ui.components.TouchPointsEditor
 import com.algorithm.tapflow.assist.ui.theme.AppBackground
 import com.algorithm.tapflow.assist.ui.theme.AppCardSecondary
 import com.algorithm.tapflow.assist.ui.theme.PrimaryBlue
@@ -54,9 +52,10 @@ import com.algorithm.tapflow.assist.ui.theme.TextPrimary
 import com.algorithm.tapflow.assist.ui.theme.TextSecondary
 import com.algorithm.tapflow.assist.ui.viewmodel.EditorViewModel
 import android.app.Activity
-import androidx.compose.ui.platform.LocalContext
 import android.os.Handler
 import android.os.Looper
+import com.algorithm.tapflow.assist.data.model.TouchPoint
+import com.algorithm.tapflow.assist.overlay.OverlaySavedPointsStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +69,6 @@ fun EditorScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var expanded by remember { mutableStateOf(false) }
-    var isDragging by remember { mutableStateOf(false) }
     var lastImportedAt by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(presetId) {
@@ -82,24 +80,28 @@ fun EditorScreen(
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                val prefs = context.getSharedPreferences("overlay_setup_prefs", android.content.Context.MODE_PRIVATE)
+                val prefs = context.getSharedPreferences(
+                    "overlay_setup_prefs",
+                    android.content.Context.MODE_PRIVATE
+                )
                 val savedAt = prefs.getLong(OverlaySetupService.KEY_LAST_SAVED_AT, 0L)
 
                 if (savedAt > 0L && savedAt != lastImportedAt) {
                     val savedOverlayPoints = OverlaySavedPointsReader.read(context)
 
-                    if (savedOverlayPoints.isNotEmpty()) {
-                        viewModel.clearAllPoints()
-
-                        savedOverlayPoints.forEach { point ->
-                            viewModel.addPointAt(
-                                point.x.toFloat(),
-                                point.y.toFloat()
+                    viewModel.replaceAllPoints(
+                        savedOverlayPoints.mapIndexed { index, point ->
+                            TouchPoint(
+                                id = index + 1,
+                                x = point.x.toFloat(),
+                                y = point.y.toFloat(),
+                                delayBeforeMs = 0L
                             )
                         }
+                    )
 
-                        lastImportedAt = savedAt
-                    }
+                    OverlaySavedPointsStore.clear(context)
+                    lastImportedAt = savedAt
                 }
             }
         }
@@ -140,12 +142,11 @@ fun EditorScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            userScrollEnabled = !isDragging
         ) {
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Touch Canvas",
+                        text = "Point Setup",
                         color = TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
@@ -154,29 +155,17 @@ fun EditorScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Tap empty space to add a point. Drag point to move it.",
+                        text = "Open overlay mode to place points above other apps.",
                         color = TextSecondary,
                         fontSize = 14.sp
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    TouchPointsEditor(
-                        points = uiState.points,
-                        selectedPointId = uiState.selectedPointId,
-                        onAddPoint = viewModel::addPointAt,
-                        onMovePoint = viewModel::movePoint,
-                        onSelectPoint = viewModel::selectPoint,
-                        onDragStateChanged = { dragging ->
-                            isDragging = dragging
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    PrimaryButton(
-                        text = "Delete Selected Point",
-                        onClick = viewModel::removeSelectedPoint
+                    Text(
+                        text = "Configured points: ${uiState.points.size}",
+                        color = TextSecondary,
+                        fontSize = 14.sp
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))

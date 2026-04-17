@@ -18,14 +18,7 @@ class EditorViewModel(
     private val repository: PresetRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        EditorUiState(
-            points = listOf(
-                TouchPoint(id = 1, x = 220f, y = 420f),
-                TouchPoint(id = 2, x = 400f, y = 680f, delayBeforeMs = 300)
-            )
-        )
-    )
+    private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
     fun loadPreset(presetId: Long) {
@@ -71,6 +64,14 @@ class EditorViewModel(
         _uiState.value = _uiState.value.copy(holdDurationMs = value.filter(Char::isDigit))
     }
 
+    fun updateType(type: GestureType) {
+        _uiState.value = _uiState.value.copy(type = type)
+    }
+
+    fun selectPoint(pointId: Int?) {
+        _uiState.value = _uiState.value.copy(selectedPointId = pointId)
+    }
+
     fun clearAllPoints() {
         _uiState.update { current ->
             current.copy(
@@ -80,12 +81,13 @@ class EditorViewModel(
         }
     }
 
-    fun updateType(type: GestureType) {
-        _uiState.value = _uiState.value.copy(type = type)
-    }
-
-    fun selectPoint(pointId: Int?) {
-        _uiState.value = _uiState.value.copy(selectedPointId = pointId)
+    fun replaceAllPoints(newPoints: List<TouchPoint>) {
+        _uiState.update { current ->
+            current.copy(
+                points = newPoints,
+                selectedPointId = newPoints.firstOrNull()?.id
+            )
+        }
     }
 
     fun addPointAt(x: Float, y: Float) {
@@ -102,25 +104,6 @@ class EditorViewModel(
         _uiState.value = state.copy(
             points = state.points + newPoint,
             selectedPointId = newPoint.id
-        )
-    }
-
-    fun movePoint(pointId: Int, x: Float, y: Float) {
-        val state = _uiState.value
-        _uiState.value = state.copy(
-            points = state.points.map { point ->
-                if (point.id == pointId) point.copy(x = x, y = y) else point
-            }
-        )
-    }
-
-    fun removeSelectedPoint() {
-        val selectedId = _uiState.value.selectedPointId ?: return
-        val updated = _uiState.value.points.filterNot { it.id == selectedId }
-
-        _uiState.value = _uiState.value.copy(
-            points = updated,
-            selectedPointId = updated.lastOrNull()?.id
         )
     }
 
