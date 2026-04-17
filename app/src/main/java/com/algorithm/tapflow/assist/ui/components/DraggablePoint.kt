@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun DraggablePoint(
-    label: String,
+    label: String?,
     startX: Int,
     startY: Int,
     onMoved: (Int, Int) -> Unit
@@ -62,11 +62,13 @@ fun DraggablePoint(
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
+        if (!label.isNullOrBlank()) {
+            Text(
+                text = label,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        }
     }
 }

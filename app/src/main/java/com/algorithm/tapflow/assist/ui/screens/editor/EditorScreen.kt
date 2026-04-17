@@ -177,6 +177,7 @@ fun EditorScreen(
                                 OverlayStarter.openOverlayPermission(context)
                             } else {
                                 OverlaySetupSession.reset()
+                                OverlaySetupSession.setGestureType(uiState.type)
 
                                 uiState.points.forEach { point ->
                                     OverlaySetupSession.addPoint(

@@ -93,8 +93,10 @@ class OverlaySetupService : Service(),
 
             setContent {
                 val points by OverlaySetupSession.points.collectAsState()
+                val type by OverlaySetupSession.gestureType.collectAsState()
 
                 OverlaySetupContent(
+                    type = type,
                     points = points,
                     onAddPoint = { OverlaySetupSession.addPoint() },
                     onDeleteLast = { OverlaySetupSession.deleteLastPoint() },
@@ -105,6 +107,9 @@ class OverlaySetupService : Service(),
                     },
                     onMovePoint = { id, x, y ->
                         OverlaySetupSession.movePoint(id, x, y)
+                    },
+                    onReplaceSinglePoint = { x, y ->
+                        OverlaySetupSession.replaceWithSinglePoint(x, y)
                     }
                 )
             }

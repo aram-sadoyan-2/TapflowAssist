@@ -1,30 +1,43 @@
 package com.algorithm.tapflow.assist.overlay
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import com.algorithm.tapflow.assist.data.model.GestureType
 
 @Composable
 fun OverlaySetupContent(
+    type: GestureType,
     points: List<OverlayPoint>,
     onAddPoint: () -> Unit,
     onDeleteLast: () -> Unit,
     onSave: () -> Unit,
     onClose: () -> Unit,
-    onMovePoint: (Long, Int, Int) -> Unit
+    onMovePoint: (Long, Int, Int) -> Unit,
+    onReplaceSinglePoint: (Int, Int) -> Unit
 ) {
+    val singlePointMode = type == GestureType.SINGLE_TAP || type == GestureType.LONG_PRESS
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Transparent)
+            .pointerInput(type) {
+                if (singlePointMode) {
+                    detectTapGestures { offset ->
+                        onReplaceSinglePoint(offset.x.toInt(), offset.y.toInt())
+                    }
+                }
+            }
     ) {
         points.forEachIndexed { index, point ->
             DraggablePoint(
-                label = "${index + 1}",
+                label = if (singlePointMode) null else "${index + 1}",
                 startX = point.x,
                 startY = point.y,
                 onMoved = { x, y ->
@@ -34,6 +47,7 @@ fun OverlaySetupContent(
         }
 
         DraggableControlPanel(
+            showAddRemove = !singlePointMode,
             onAddPoint = onAddPoint,
             onDeleteLast = onDeleteLast,
             onSave = onSave,

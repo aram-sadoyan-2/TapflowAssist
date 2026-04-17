@@ -7,7 +7,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -31,6 +30,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun DraggableControlPanel(
+    showAddRemove: Boolean,
     onAddPoint: () -> Unit,
     onDeleteLast: () -> Unit,
     onSave: () -> Unit,
@@ -75,22 +75,25 @@ fun DraggableControlPanel(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                repeat(3) {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(2) {
                     Box(
                         modifier = Modifier
-                            .size(width = 12.dp, height = 2.dp)
+                            .size(4.dp)
                             .background(
                                 Color.White.copy(alpha = 0.85f),
-                                RoundedCornerShape(2.dp)
+                                CircleShape
                             )
                     )
                 }
             }
         }
 
-        MiniActionButton(text = "+", onClick = onAddPoint)
-        MiniActionButton(text = "−", onClick = onDeleteLast)
+        if (showAddRemove) {
+            MiniActionButton(text = "+", onClick = onAddPoint)
+            MiniActionButton(text = "−", onClick = onDeleteLast)
+        }
+
         MiniActionButton(text = "Save", onClick = onSave)
         MiniActionButton(text = "Close", onClick = onClose)
     }
