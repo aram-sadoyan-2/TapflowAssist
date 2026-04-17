@@ -89,12 +89,16 @@ fun EditorScreen(
                 if (savedAt > 0L && savedAt != lastImportedAt) {
                     val savedOverlayPoints = OverlaySavedPointsReader.read(context)
 
+                    val halfPointPx = with(context.resources.displayMetrics) {
+                        29f * density
+                    }
+
                     viewModel.replaceAllPoints(
                         savedOverlayPoints.mapIndexed { index, point ->
                             TouchPoint(
                                 id = index + 1,
-                                x = point.x.toFloat(),
-                                y = point.y.toFloat(),
+                                x = point.x + halfPointPx,
+                                y = point.y + halfPointPx,
                                 delayBeforeMs = 0L
                             )
                         }
