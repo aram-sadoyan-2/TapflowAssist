@@ -40,16 +40,6 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <service
-            android:name=".service.FloatingOverlayService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-            tools:ignore="ForegroundServicePermission">
-
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Shows a temporary user-visible floating overlay for touch assistance controls." />
-        </service>
 
         <service
             android:name=".overlay.OverlaySetupService"
@@ -59,6 +49,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Shows a temporary overlay editor so the user can place and adjust touch points above other apps." />
+        </service>
+
+        <service
+            android:name=".service.FloatingOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows temporary floating playback controls for user-initiated touch assistance." />
         </service>
 
     </application>

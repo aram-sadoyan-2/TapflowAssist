@@ -1,6 +1,8 @@
 package com.algorithm.tapflow.assist.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -8,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.algorithm.tapflow.assist.service.FloatingOverlayStarter
 import com.algorithm.tapflow.assist.service.ServiceLocator
 import com.algorithm.tapflow.assist.ui.screens.editor.EditorScreen
 import com.algorithm.tapflow.assist.ui.screens.home.HomeScreen
@@ -86,12 +89,22 @@ fun AppNavGraph() {
             val vm: PresetsViewModel = viewModel(
                 factory = PresetsViewModel.factory(repository)
             )
+            val context = LocalContext.current
+            val uiState by vm.uiState.collectAsState()
 
             PresetsScreen(
                 viewModel = vm,
                 onBack = { navController.popBackStack() },
                 onPresetClick = { presetId ->
                     navController.navigate(Routes.Editor.createRoute(presetId))
+                },
+                onStartPreset = { presetId ->
+                    val preset = uiState.presets.firstOrNull { it.id == presetId } ?: return@PresetsScreen
+                    FloatingOverlayStarter.start(context, preset)
+
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        (context as? android.app.Activity)?.moveTaskToBack(true)
+                    }, 200)
                 }
             )
         }
