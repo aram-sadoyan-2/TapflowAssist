@@ -99,7 +99,10 @@ class OverlaySetupService : Service(),
                     onAddPoint = { OverlaySetupSession.addPoint() },
                     onDeleteLast = { OverlaySetupSession.deleteLastPoint() },
                     onSave = { savePointsAndClose() },
-                    onClose = { stopSelf() },
+                    onClose = {
+                        bringAppToFront()
+                        stopSelf()
+                    },
                     onMovePoint = { id, x, y ->
                         OverlaySetupSession.movePoint(id, x, y)
                     }
@@ -132,6 +135,7 @@ class OverlaySetupService : Service(),
             .putLong(KEY_LAST_SAVED_AT, System.currentTimeMillis())
             .apply()
 
+        bringAppToFront()
         stopSelf()
     }
 
@@ -165,6 +169,19 @@ class OverlaySetupService : Service(),
             )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun bringAppToFront() {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+            )
+        }
+        if (launchIntent != null) {
+            startActivity(launchIntent)
         }
     }
 

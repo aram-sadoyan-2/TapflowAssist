@@ -53,6 +53,10 @@ import com.algorithm.tapflow.assist.ui.theme.PrimaryBlue
 import com.algorithm.tapflow.assist.ui.theme.TextPrimary
 import com.algorithm.tapflow.assist.ui.theme.TextSecondary
 import com.algorithm.tapflow.assist.ui.viewmodel.EditorViewModel
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
+import android.os.Handler
+import android.os.Looper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,11 +185,8 @@ fun EditorScreen(
                         text = "Setup Points Over Apps",
                         onClick = {
                             if (!OverlayStarter.canDrawOverlays(context)) {
-                                Log.d("dwd", "Overlay permission missing, opening settings")
                                 OverlayStarter.openOverlayPermission(context)
                             } else {
-                                Log.d("dwd", "Overlay permission granted, starting service")
-
                                 OverlaySetupSession.reset()
 
                                 uiState.points.forEach { point ->
@@ -200,6 +201,10 @@ fun EditorScreen(
                                 }
 
                                 OverlayStarter.startOverlay(context)
+
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    (context as? Activity)?.moveTaskToBack(true)
+                                }, 200)
                             }
                         }
                     )
