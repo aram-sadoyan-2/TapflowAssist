@@ -11,6 +11,7 @@ import com.algorithm.tapflow.assist.ui.state.EditorUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditorViewModel(
@@ -68,6 +69,15 @@ class EditorViewModel(
 
     fun updateHold(value: String) {
         _uiState.value = _uiState.value.copy(holdDurationMs = value.filter(Char::isDigit))
+    }
+
+    fun clearAllPoints() {
+        _uiState.update { current ->
+            current.copy(
+                points = emptyList(),
+                selectedPointId = null
+            )
+        }
     }
 
     fun updateType(type: GestureType) {

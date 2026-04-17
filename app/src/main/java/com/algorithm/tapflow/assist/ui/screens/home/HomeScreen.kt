@@ -1,5 +1,7 @@
 package com.algorithm.tapflow.assist.ui.screens.home
 
+import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,14 +14,20 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.algorithm.tapflow.assist.overlay.OverlaySetupService
+import com.algorithm.tapflow.assist.overlay.OverlaySetupSession
+import com.algorithm.tapflow.assist.overlay.OverlayStarter
 import com.algorithm.tapflow.assist.ui.components.AppTopBar
 import com.algorithm.tapflow.assist.ui.components.GlassCard
 import com.algorithm.tapflow.assist.ui.components.PrimaryButton
@@ -104,6 +112,36 @@ fun HomeScreen(
                 text = "Start",
                 onClick = onCreateNew
             )
+
+            val context = LocalContext.current
+//            PrimaryButton(
+//                text = "Setup Points Over Apps",
+//                onClick = {
+//                    Log.d("dwd", "Button clicked")
+//
+//                    if (!OverlayStarter.canDrawOverlays(context)) {
+//                        Log.d("dwd", "Overlay permission missing, opening settings")
+//                        OverlayStarter.openOverlayPermission(context)
+//                    } else {
+//                        Log.d("dwd", "Overlay permission granted, starting service")
+//
+//                        OverlaySetupSession.reset()
+//
+//                        uiState.points.forEach { point ->
+//                            OverlaySetupSession.addPoint(
+//                                defaultX = point.x.toInt(),
+//                                defaultY = point.y.toInt()
+//                            )
+//                        }
+//
+//                        if (uiState.points.isEmpty()) {
+//                            OverlaySetupSession.addPoint(300, 500)
+//                        }
+//
+//                        OverlayStarter.startOverlay(context)
+//                    }
+//                }
+//            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

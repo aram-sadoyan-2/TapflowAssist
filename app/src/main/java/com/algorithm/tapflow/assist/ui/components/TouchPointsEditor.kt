@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.algorithm.tapflow.assist.data.model.TouchPoint
+import com.algorithm.tapflow.assist.overlay.DraggablePoint
 import com.algorithm.tapflow.assist.ui.theme.AppCardSecondary
 import com.algorithm.tapflow.assist.ui.theme.DividerColor
 import kotlin.math.hypot
@@ -100,20 +101,20 @@ fun TouchPointsEditor(
         }
 
         points.forEachIndexed { index, point ->
-            DraggablePoint(
-                number = index + 1,
-                x = point.x,
-                y = point.y,
-                isSelected = point.id == selectedPointId,
-                canvasWidth = canvasWidth.toFloat(),
-                canvasHeight = canvasHeight.toFloat(),
-                onTap = { onSelectPoint(point.id) },
-                onDragStart = { onDragStateChanged(true) },
-                onDragEnd = { onDragStateChanged(false) },
-                onDrag = { newX, newY ->
-                    onMovePoint(point.id, newX, newY)
-                }
-            )
+//            DraggablePoint(
+//                number = index + 1,
+//                x = point.x,
+//                y = point.y,
+//                isSelected = point.id == selectedPointId,
+//                canvasWidth = canvasWidth.toFloat(),
+//                canvasHeight = canvasHeight.toFloat(),
+//                onTap = { onSelectPoint(point.id) },
+//                onDragStart = { onDragStateChanged(true) },
+//                onDragEnd = { onDragStateChanged(false) },
+//                onDrag = { newX, newY ->
+//                    onMovePoint(point.id, newX, newY)
+//                }
+//            )
         }
     }
 }

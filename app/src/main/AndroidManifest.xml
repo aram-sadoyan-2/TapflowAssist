@@ -15,6 +15,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TapflowAssist">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -22,7 +23,6 @@
             android:theme="@style/Theme.TapflowAssist">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -44,7 +44,23 @@
             android:name=".service.FloatingOverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
-            tools:ignore="ForegroundServicePermission" />
+            tools:ignore="ForegroundServicePermission">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows a temporary user-visible floating overlay for touch assistance controls." />
+        </service>
+
+        <service
+            android:name=".overlay.OverlaySetupService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows a temporary overlay editor so the user can place and adjust touch points above other apps." />
+        </service>
+
     </application>
 
 </manifest>
