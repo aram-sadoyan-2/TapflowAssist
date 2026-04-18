@@ -3,6 +3,7 @@ package com.algorithm.tapflow.assist.ui.screens.home
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +45,8 @@ fun HomeScreen(
     onCreateNew: () -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenPresets: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onRecentPresetClick: (Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -205,7 +207,11 @@ fun HomeScreen(
             }
         } else {
             uiState.presets.take(3).forEach { preset ->
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onRecentPresetClick(preset.id) }
+                ) {
                     Text(
                         text = preset.name,
                         color = TextPrimary,

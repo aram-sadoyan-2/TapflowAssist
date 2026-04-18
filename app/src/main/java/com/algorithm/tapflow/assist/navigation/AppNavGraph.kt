@@ -51,6 +51,9 @@ fun AppNavGraph() {
                 },
                 onOpenSettings = {
                     navController.navigate(Routes.Settings.route)
+                },
+                onRecentPresetClick = { presetId ->
+                    navController.navigate(Routes.Editor.createRoute(presetId))
                 }
             )
         }
