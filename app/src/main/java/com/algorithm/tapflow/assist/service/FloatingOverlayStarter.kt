@@ -11,7 +11,10 @@ object FloatingOverlayStarter {
 
     fun start(context: Context, preset: TouchPreset) {
         Log.d("TapFlowRun", "FloatingOverlayStarter.start preset=${preset.name} id=${preset.id}")
+
         PresetRuntimeSession.setPreset(preset)
+
+        TouchAccessibilityService.instance?.showPresetPoints(preset)
 
         val intent = Intent(context, FloatingOverlayService::class.java)
 
@@ -23,6 +26,7 @@ object FloatingOverlayStarter {
     }
 
     fun stop(context: Context) {
+        TouchAccessibilityService.instance?.showPresetPoints(null)
         context.stopService(Intent(context, FloatingOverlayService::class.java))
         PresetRuntimeSession.stop()
     }

@@ -13,6 +13,8 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -25,11 +27,15 @@ class FloatingOverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayView: LinearLayout? = null
+    private var overlayParams: WindowManager.LayoutParams? = null
 
     override fun onCreate() {
         super.onCreate()
         startInForeground()
         createOverlay()
+
+        val preset = PresetRuntimeSession.activePreset.value
+        TouchAccessibilityService.instance?.showPresetPoints(preset)
     }
 
     override fun onDestroy() {
@@ -77,6 +83,14 @@ class FloatingOverlayService : Service() {
     private fun createOverlay() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
+        val dragHandle = TextView(this).apply {
+            text = "≡"
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setPadding(20, 10, 20, 10)
+            setBackgroundColor(0x00000000)
+        }
+
         val playView = actionText("▶") {
             val preset = PresetRuntimeSession.activePreset.value
             if (preset == null) {
@@ -90,19 +104,18 @@ class FloatingOverlayService : Service() {
                 Toast.makeText(
                     this,
                     "Accessibility service is not connected",
-                    android.widget.Toast.LENGTH_SHORT
+                    Toast.LENGTH_SHORT
                 ).show()
                 return@actionText
             }
 
             Log.d("TapFlowRun", "Starting preset: ${preset.name}")
-            PresetRuntimeSession.start()
+            service.showPresetPoints(preset)
             service.startPreset(preset)
         }
 
         val pauseView = actionText("⏸") {
             Log.d("TapFlowRun", "Pause pressed")
-            PresetRuntimeSession.pause()
             TouchAccessibilityService.instance?.pausePreset()
         }
 
@@ -112,14 +125,20 @@ class FloatingOverlayService : Service() {
             stopSelf()
         }
 
-        overlayView = LinearLayout(this).apply {
+        val buttonsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(32, 20, 32, 20)
-            setBackgroundColor(0xCC111A2E.toInt())
-
             addView(playView)
             addView(pauseView)
             addView(stopView)
+        }
+
+        overlayView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(18, 18, 18, 18)
+            setBackgroundColor(0xDD111A2E.toInt())
+
+            addView(dragHandle)
+            addView(buttonsRow)
         }
 
         val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -129,19 +148,55 @@ class FloatingOverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val params = WindowManager.LayoutParams(
+        overlayParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             windowType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = 0
-            y = 200
+            gravity = Gravity.TOP or Gravity.START
+            x = 80
+            y = 220
         }
 
-        windowManager?.addView(overlayView, params)
+        attachDragBehavior(dragHandle)
+
+        windowManager?.addView(overlayView, overlayParams)
+    }
+
+    private fun attachDragBehavior(dragHandle: View) {
+        dragHandle.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                val params = overlayParams ?: return false
+                val view = overlayView ?: return false
+                val wm = windowManager ?: return false
+
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        return true
+                    }
+
+                    MotionEvent.ACTION_MOVE -> {
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        wm.updateViewLayout(view, params)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
     }
 
     private fun actionText(label: String, onClick: () -> Unit): TextView {
@@ -149,7 +204,7 @@ class FloatingOverlayService : Service() {
             text = label
             textSize = 22f
             setTextColor(Color.WHITE)
-            setPadding(24, 10, 24, 10)
+            setPadding(28, 16, 28, 16)
             setOnClickListener { onClick() }
         }
     }
@@ -159,6 +214,7 @@ class FloatingOverlayService : Service() {
             runCatching { windowManager?.removeView(view) }
         }
         overlayView = null
+        overlayParams = null
         windowManager = null
     }
 

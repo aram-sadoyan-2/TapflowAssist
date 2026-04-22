@@ -8,6 +8,7 @@ import android.view.accessibility.AccessibilityEvent
 import com.algorithm.tapflow.assist.data.model.GestureType
 import com.algorithm.tapflow.assist.data.model.TouchPoint
 import com.algorithm.tapflow.assist.data.model.TouchPreset
+import com.algorithm.tapflow.assist.overlay.ClickIndicatorOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,11 +29,14 @@ class TouchAccessibilityService : AccessibilityService() {
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var clickIndicatorOverlay: ClickIndicatorOverlay? = null
     private var runJob: Job? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        clickIndicatorOverlay = ClickIndicatorOverlay(this)
+        clickIndicatorOverlay?.show()
         Log.d("TapFlowRun", "Accessibility service connected")
     }
 
@@ -41,10 +45,20 @@ class TouchAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        super.onDestroy()
         runJob?.cancel()
         serviceScope.cancel()
+        clickIndicatorOverlay?.hide()
+        clickIndicatorOverlay = null
         if (instance === this) instance = null
-        super.onDestroy()
+    }
+
+    fun showPresetPoints(preset: TouchPreset?) {
+        if (preset == null) {
+            clickIndicatorOverlay?.clearPersistentPoints()
+        } else {
+            clickIndicatorOverlay?.setPersistentPoints(preset.points)
+        }
     }
 
     fun startPreset(preset: TouchPreset) {
@@ -52,7 +66,11 @@ class TouchAccessibilityService : AccessibilityService() {
             "TapFlowRun",
             "startPreset called type=${preset.type} points=${preset.points.size} repeat=${preset.repeatCount}"
         )
+
         runJob?.cancel()
+
+        clickIndicatorOverlay?.setPersistentPoints(preset.points)
+        PresetRuntimeSession.start()
 
         runJob = serviceScope.launch {
             val repeatCount = preset.repeatCount.coerceAtLeast(1)
@@ -71,18 +89,21 @@ class TouchAccessibilityService : AccessibilityService() {
                 }
             }
 
-            PresetRuntimeSession.stop()
+            runJob = null
+            PresetRuntimeSession.pause()
         }
     }
 
     fun pausePreset() {
         runJob?.cancel()
         runJob = null
+        PresetRuntimeSession.pause()
     }
 
     fun stopPreset() {
         runJob?.cancel()
         runJob = null
+        clickIndicatorOverlay?.clearPersistentPoints()
         PresetRuntimeSession.stop()
     }
 
@@ -95,6 +116,7 @@ class TouchAccessibilityService : AccessibilityService() {
             "TapFlowRun",
             "runGestureOnce type=$type points=${points.size} hold=$holdDurationMs"
         )
+
         when (type) {
             GestureType.SINGLE_TAP -> {
                 val point = points.firstOrNull() ?: return
@@ -123,6 +145,9 @@ class TouchAccessibilityService : AccessibilityService() {
 
     private suspend fun dispatchTap(x: Float, y: Float, durationMs: Long) {
         Log.d("TapFlowRun", "dispatchTap x=$x y=$y duration=$durationMs")
+
+        clickIndicatorOverlay?.pulse(x, y)
+
         val path = Path().apply { moveTo(x, y) }
 
         val gesture = GestureDescription.Builder()
@@ -136,6 +161,11 @@ class TouchAccessibilityService : AccessibilityService() {
 
     private suspend fun dispatchSwipe(points: List<TouchPoint>) {
         Log.d("TapFlowRun", "dispatchSwipe points=${points.size}")
+
+        points.forEach { point ->
+            clickIndicatorOverlay?.pulse(point.x, point.y)
+        }
+
         val path = Path().apply {
             moveTo(points.first().x, points.first().y)
             points.drop(1).forEach { lineTo(it.x, it.y) }
