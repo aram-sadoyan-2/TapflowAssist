@@ -90,7 +90,7 @@ fun OnboardingScreen(
             OnboardingPage(
                 title = "Place Points Over Apps",
                 description = "Drag numbered points on top of other apps before running your preset.",
-                imageRes = R.drawable.tutorial3,
+                imageRes = R.drawable.tutfinal,
                 accentStart = Color(0xFF3D9BFF),
                 accentEnd = Color(0xFF3C6DFF)
             ),
@@ -100,6 +100,20 @@ fun OnboardingScreen(
                 imageRes = R.drawable.tutorial4,
                 accentStart = Color(0xFF506DFF),
                 accentEnd = Color(0xFFB65CFF)
+            ),
+            OnboardingPage(
+                title = "Enable Floating Overlay",
+                description = "Allow TapFlow Assist to show tap points and control buttons over other apps.",
+                imageRes = R.drawable.tutorial3,
+                accentStart = Color(0xFF42A5FF),
+                accentEnd = Color(0xFF5B7CFF)
+            ),
+            OnboardingPage(
+                title = "Enable Accessibility Service",
+                description = "TapFlow Assist uses Accessibility only to run taps, long presses, and swipes you create and start.",
+                imageRes = R.drawable.tutorial4,
+                accentStart = Color(0xFF8B5CFF),
+                accentEnd = Color(0xFFC45CFF)
             )
         )
     }
@@ -210,7 +224,7 @@ fun OnboardingScreen(
                     label = "onboarding_button_text"
                 ) { last ->
                     Text(
-                        text = if (last) "Get Started 🎉" else "Next  →",
+                        text = if (last) "Start App" else "Next  →",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
