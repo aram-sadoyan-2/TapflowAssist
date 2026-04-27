@@ -15,8 +15,8 @@ android {
         applicationId = "com.algorithm.tapflow.assist"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,6 +66,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation("com.google.code.gson:gson:2.13.1")
+    implementation("androidx.compose.material:material-icons-extended")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -14,12 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.algorithm.tapflow.assist.permissions.PermissionHelpers
+import com.algorithm.tapflow.assist.ui.components.AccessibilityDisclosureDialog
 import com.algorithm.tapflow.assist.ui.components.AppTopBar
 import com.algorithm.tapflow.assist.ui.components.GlassCard
 import com.algorithm.tapflow.assist.ui.components.PrimaryButton
@@ -37,9 +41,15 @@ fun PermissionsScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
+    var showAccessibilityDisclosure by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     DisposableEffect(Unit) {
         viewModel.setOverlayGranted(PermissionHelpers.hasOverlayPermission(context))
+        viewModel.setAccessibilityGranted(PermissionHelpers.isAccessibilityServiceEnabled(context))
         viewModel.setBatteryIgnored(PermissionHelpers.isIgnoringBatteryOptimizations(context))
+
         onDispose { }
     }
 
@@ -79,29 +89,57 @@ fun PermissionsScreen(
                 title = "Overlay Permission",
                 subtitle = "Show floating controls above apps.",
                 checked = uiState.overlayGranted,
-                onCheckedChange = { PermissionHelpers.openOverlaySettings(context) }
+                onCheckedChange = {
+                    PermissionHelpers.openOverlaySettings(context)
+                }
             )
 
             SettingRow(
                 title = "Accessibility Service",
-                subtitle = "Enable touch assistance actions.",
+                subtitle = "Run your saved taps, swipes, and gestures.",
                 checked = uiState.accessibilityGranted,
-                onCheckedChange = { PermissionHelpers.openAccessibilitySettings(context) }
+                onCheckedChange = {
+                    if (!uiState.accessibilityGranted) {
+                        showAccessibilityDisclosure = true
+                    }
+                }
             )
 
             SettingRow(
                 title = "Battery Optimization",
                 subtitle = "Allow better session stability.",
                 checked = uiState.batteryOptimizationIgnored,
-                onCheckedChange = { PermissionHelpers.openBatteryOptimizationSettings(context) }
+                onCheckedChange = {
+                    PermissionHelpers.openBatteryOptimizationSettings(context)
+                }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
             PrimaryButton(
-                text = "Open Settings",
-                onClick = { PermissionHelpers.openAccessibilitySettings(context) }
+                text = if (uiState.accessibilityGranted) {
+                    "Accessibility Enabled"
+                } else {
+                    "Enable Accessibility Service"
+                },
+                onClick = {
+                    if (!uiState.accessibilityGranted) {
+                        showAccessibilityDisclosure = true
+                    }
+                }
             )
         }
+    }
+
+    if (showAccessibilityDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAgree = {
+                showAccessibilityDisclosure = false
+                PermissionHelpers.openAccessibilitySettings(context)
+            },
+            onDecline = {
+                showAccessibilityDisclosure = false
+            }
+        )
     }
 }

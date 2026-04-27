@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -29,6 +30,10 @@ class FloatingOverlayService : Service() {
     private var overlayView: LinearLayout? = null
     private var overlayParams: WindowManager.LayoutParams? = null
 
+    private var playView: TextView? = null
+    private var pauseView: TextView? = null
+    private var stopView: TextView? = null
+
     override fun onCreate() {
         super.onCreate()
         startInForeground()
@@ -36,6 +41,8 @@ class FloatingOverlayService : Service() {
 
         val preset = PresetRuntimeSession.activePreset.value
         TouchAccessibilityService.instance?.showPresetPoints(preset)
+
+        updateButtonStates(isRunning = false, isStopped = true)
     }
 
     override fun onDestroy() {
@@ -83,15 +90,15 @@ class FloatingOverlayService : Service() {
     private fun createOverlay() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        val dragHandle = TextView(this).apply {
-            text = "≡"
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            setPadding(20, 10, 20, 10)
-            setBackgroundColor(0x00000000)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Overlay permission is required", Toast.LENGTH_SHORT).show()
+            stopSelf()
+            return
         }
 
-        val playView = actionText("▶") {
+        val dragHandle = createDragHandle()
+
+        playView = actionText("▶") {
             val preset = PresetRuntimeSession.activePreset.value
             if (preset == null) {
                 Toast.makeText(this, "No preset loaded", Toast.LENGTH_SHORT).show()
@@ -112,33 +119,32 @@ class FloatingOverlayService : Service() {
             Log.d("TapFlowRun", "Starting preset: ${preset.name}")
             service.showPresetPoints(preset)
             service.startPreset(preset)
+            updateButtonStates(isRunning = true, isStopped = false)
         }
 
-        val pauseView = actionText("⏸") {
+        pauseView = actionText("⏸") {
             Log.d("TapFlowRun", "Pause pressed")
             TouchAccessibilityService.instance?.pausePreset()
+            updateButtonStates(isRunning = false, isStopped = false)
         }
 
-        val stopView = actionText("■") {
+        stopView = actionText("■") {
             Log.d("TapFlowRun", "Stop pressed")
             TouchAccessibilityService.instance?.stopPreset()
+            updateButtonStates(isRunning = false, isStopped = true)
             stopSelf()
         }
 
-        val buttonsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(playView)
-            addView(pauseView)
-            addView(stopView)
-        }
-
         overlayView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(18, 18, 18, 18)
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(16, 16, 16, 16)
             setBackgroundColor(0xDD111A2E.toInt())
 
             addView(dragHandle)
-            addView(buttonsRow)
+            addView(playView)
+            addView(pauseView)
+            addView(stopView)
         }
 
         val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -163,7 +169,82 @@ class FloatingOverlayService : Service() {
 
         attachDragBehavior(dragHandle)
 
-        windowManager?.addView(overlayView, overlayParams)
+        runCatching {
+            windowManager?.addView(overlayView, overlayParams)
+        }.onFailure { error ->
+            Log.e("TapFlowRun", "Failed to add floating overlay", error)
+            Toast.makeText(this, "Failed to show floating controls", Toast.LENGTH_SHORT).show()
+            stopSelf()
+        }
+    }
+
+    private fun createDragHandle(): TextView {
+        return TextView(this).apply {
+            text = "≡"
+            textSize = 20f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(24, 22, 24, 22)
+            setBackgroundColor(0x334A5A7A)
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 14
+            }
+        }
+    }
+
+    private fun actionText(label: String, onClick: () -> Unit): TextView {
+        return TextView(this).apply {
+            text = label
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(34, 22, 34, 22)
+            setBackgroundColor(0x223A4A6A)
+            isClickable = true
+            isFocusable = true
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 12
+            }
+
+            setOnClickListener { onClick() }
+        }
+    }
+
+    private fun updateButtonStates(isRunning: Boolean, isStopped: Boolean) {
+        val normalBg = 0x223A4A6A
+        val activeBg = 0xFF2E7D32.toInt()
+        val pauseBg = 0xFFF9A825.toInt()
+        val stopBg = 0xFFC62828.toInt()
+
+        playView?.apply {
+            isSelected = isRunning
+            setBackgroundColor(if (isRunning) activeBg else normalBg)
+            setTextColor(Color.WHITE)
+            alpha = if (isRunning) 1f else 0.9f
+        }
+
+        pauseView?.apply {
+            val selected = !isRunning && !isStopped
+            isSelected = selected
+            setBackgroundColor(if (selected) pauseBg else normalBg)
+            setTextColor(Color.WHITE)
+            alpha = if (selected) 1f else 0.9f
+        }
+
+        stopView?.apply {
+            isSelected = isStopped
+            setBackgroundColor(if (isStopped) stopBg else normalBg)
+            setTextColor(Color.WHITE)
+            alpha = if (isStopped) 1f else 0.9f
+        }
     }
 
     private fun attachDragBehavior(dragHandle: View) {
@@ -178,7 +259,7 @@ class FloatingOverlayService : Service() {
                 val view = overlayView ?: return false
                 val wm = windowManager ?: return false
 
-                when (event.action) {
+                when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         initialX = params.x
                         initialY = params.y
@@ -193,20 +274,13 @@ class FloatingOverlayService : Service() {
                         wm.updateViewLayout(view, params)
                         return true
                     }
+
+                    MotionEvent.ACTION_UP,
+                    MotionEvent.ACTION_CANCEL -> return true
                 }
                 return false
             }
         })
-    }
-
-    private fun actionText(label: String, onClick: () -> Unit): TextView {
-        return TextView(this).apply {
-            text = label
-            textSize = 22f
-            setTextColor(Color.WHITE)
-            setPadding(28, 16, 28, 16)
-            setOnClickListener { onClick() }
-        }
     }
 
     private fun removeOverlay() {
@@ -215,6 +289,9 @@ class FloatingOverlayService : Service() {
         }
         overlayView = null
         overlayParams = null
+        playView = null
+        pauseView = null
+        stopView = null
         windowManager = null
     }
 

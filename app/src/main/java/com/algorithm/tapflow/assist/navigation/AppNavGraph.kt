@@ -1,8 +1,15 @@
 package com.algorithm.tapflow.assist.navigation
 
+import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -11,8 +18,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.algorithm.tapflow.assist.data.model.GestureType
+import com.algorithm.tapflow.assist.service.AccessibilityHelper
 import com.algorithm.tapflow.assist.service.FloatingOverlayStarter
 import com.algorithm.tapflow.assist.service.ServiceLocator
+import com.algorithm.tapflow.assist.ui.components.AccessibilityDisclosureDialog
 import com.algorithm.tapflow.assist.ui.screens.editor.EditorScreen
 import com.algorithm.tapflow.assist.ui.screens.home.HomeScreen
 import com.algorithm.tapflow.assist.ui.screens.permissions.PermissionsScreen
@@ -28,6 +37,14 @@ fun AppNavGraph() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val repository = ServiceLocator.providePresetRepository(context)
+
+    var showAccessibilityDisclosure by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var pendingPresetId by rememberSaveable {
+        mutableLongStateOf(-1L)
+    }
 
     NavHost(
         navController = navController,
@@ -71,12 +88,16 @@ fun AppNavGraph() {
                 factory = EditorViewModel.factory(repository)
             )
 
-            val presetId = backStackEntry.arguments?.getLong("presetId")?.takeIf { it > 0L }
+            val presetId = backStackEntry.arguments
+                ?.getLong("presetId")
+                ?.takeIf { it > 0L }
 
             EditorScreen(
                 viewModel = vm,
                 presetId = presetId,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -85,7 +106,9 @@ fun AppNavGraph() {
 
             PermissionsScreen(
                 viewModel = vm,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -93,20 +116,24 @@ fun AppNavGraph() {
             val vm: PresetsViewModel = viewModel(
                 factory = PresetsViewModel.factory(repository)
             )
-            val context = LocalContext.current
+
             val uiState by vm.uiState.collectAsState()
 
             PresetsScreen(
                 viewModel = vm,
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    navController.popBackStack()
+                },
                 onPresetClick = { presetId ->
                     navController.navigate(Routes.Editor.createRoute(presetId))
                 },
                 onStartPreset = { presetId ->
-                    val preset = uiState.presets.firstOrNull { it.id == presetId } ?: return@PresetsScreen
+                    val preset = uiState.presets.firstOrNull { it.id == presetId }
+                        ?: return@PresetsScreen
 
-                    if (!com.algorithm.tapflow.assist.service.AccessibilityHelper.isTouchServiceEnabled(context)) {
-                        com.algorithm.tapflow.assist.service.AccessibilityHelper.openAccessibilitySettings(context)
+                    if (!AccessibilityHelper.isTouchServiceEnabled(context)) {
+                        pendingPresetId = presetId
+                        showAccessibilityDisclosure = true
                         return@PresetsScreen
                     }
 
@@ -121,8 +148,8 @@ fun AppNavGraph() {
 
                     FloatingOverlayStarter.start(context, preset)
 
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        (context as? android.app.Activity)?.moveTaskToBack(true)
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        (context as? Activity)?.moveTaskToBack(true)
                     }, 200)
                 }
             )
@@ -130,8 +157,25 @@ fun AppNavGraph() {
 
         composable(Routes.Settings.route) {
             SettingsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
+    }
+
+    if (showAccessibilityDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAgree = {
+                showAccessibilityDisclosure = false
+                pendingPresetId = -1L
+
+                AccessibilityHelper.openAccessibilitySettings(context)
+            },
+            onDecline = {
+                showAccessibilityDisclosure = false
+                pendingPresetId = -1L
+            }
+        )
     }
 }
