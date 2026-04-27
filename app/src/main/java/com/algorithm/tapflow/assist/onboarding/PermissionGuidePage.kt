@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.algorithm.tapflow.assist.R
 import kotlinx.coroutines.launch
 
-private data class OnboardingPage(
+private data class PermissionGuidePage(
     val title: String,
     val description: String,
     @DrawableRes val imageRes: Int,
@@ -68,36 +68,29 @@ private data class OnboardingPage(
 )
 
 @Composable
-fun OnboardingScreen(
+fun AccessibilityPermissionGuideScreen(
     onFinish: () -> Unit
 ) {
     val pages = remember {
         listOf(
-            OnboardingPage(
-                title = "Start With a New Setup",
-                description = "Create your first automation setup and manage saved presets anytime.",
-                imageRes = R.drawable.tutorial_1,
+            PermissionGuidePage(
+                title = "Open Downloaded Apps",
+                description = "In Accessibility settings, tap Downloaded apps.",
+                imageRes = R.drawable.prm1,
                 accentStart = Color(0xFF42A5FF),
                 accentEnd = Color(0xFF7C3DFF)
             ),
-            OnboardingPage(
-                title = "Set Up Touch Points",
-                description = "Open overlay mode to place tap points exactly where you need them.",
-                imageRes = R.drawable.tutorial_2,
+            PermissionGuidePage(
+                title = "Choose TapFlow Assist",
+                description = "Find TapFlow Assist in the list and open it.",
+                imageRes = R.drawable.prm2,
                 accentStart = Color(0xFF8B5CFF),
                 accentEnd = Color(0xFFC45CFF)
             ),
-            OnboardingPage(
-                title = "Place Points Over Apps",
-                description = "Drag numbered points on top of other apps before running your preset.",
-                imageRes = R.drawable.tutfinal,
-                accentStart = Color(0xFF3D9BFF),
-                accentEnd = Color(0xFF3C6DFF)
-            ),
-            OnboardingPage(
-                title = "Control When It Runs",
-                description = "Start, pause, or stop your preset anytime from the floating controls.",
-                imageRes = R.drawable.tutorial4,
+            PermissionGuidePage(
+                title = "Enable Use TapFlow Assist",
+                description = "Turn on Use TapFlow Assist to allow your own tap, long press, and swipe actions.",
+                imageRes = R.drawable.prm3,
                 accentStart = Color(0xFF506DFF),
                 accentEnd = Color(0xFFB65CFF)
             )
@@ -131,7 +124,7 @@ fun OnboardingScreen(
             .padding(WindowInsets.statusBars.asPaddingValues())
             .padding(WindowInsets.navigationBars.asPaddingValues())
     ) {
-        SoftBackgroundGlow(
+        SoftPermissionGlow(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = 80.dp),
@@ -155,21 +148,41 @@ fun OnboardingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .padding(top = 48.dp, bottom = 22.dp),
+                .padding(top = 38.dp, bottom = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Permission Guide",
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Follow these 3 steps in Android settings.",
+                color = Color.White.copy(alpha = 0.72f),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             ) { pageIndex ->
-                OnboardingPageContent(
+                PermissionGuidePageContent(
                     page = pages[pageIndex]
                 )
             }
 
-            PagerDots(
+            PermissionPagerDots(
                 pageCount = pages.size,
                 currentPage = currentPage,
                 currentAccent = pages[currentPage].accentStart
@@ -207,10 +220,10 @@ fun OnboardingScreen(
                     transitionSpec = {
                         fadeIn(tween(180)) togetherWith fadeOut(tween(180))
                     },
-                    label = "onboarding_button_text"
+                    label = "permission_button_text"
                 ) { last ->
                     Text(
-                        text = if (last) "Continue" else "Next  →",
+                        text = if (last) "Start App" else "Next  →",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -221,8 +234,8 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun OnboardingPageContent(
-    page: OnboardingPage
+private fun PermissionGuidePageContent(
+    page: PermissionGuidePage
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -232,16 +245,16 @@ private fun OnboardingPageContent(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 18.dp),
+                .padding(top = 4.dp, bottom = 10.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.70f)
+                    .fillMaxWidth(0.62f)
                     .aspectRatio(0.54f),
                 contentAlignment = Alignment.Center
             ) {
-                SoftBackgroundGlow(
+                SoftPermissionGlow(
                     modifier = Modifier.align(Alignment.Center),
                     color = page.accentEnd
                 )
@@ -251,13 +264,13 @@ private fun OnboardingPageContent(
                     contentDescription = page.title,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(34.dp))
+                        .clip(RoundedCornerShape(30.dp))
                         .border(
                             border = BorderStroke(
                                 width = 1.dp,
                                 color = Color.White.copy(alpha = 0.14f)
                             ),
-                            shape = RoundedCornerShape(34.dp)
+                            shape = RoundedCornerShape(30.dp)
                         ),
                     contentScale = ContentScale.Fit
                 )
@@ -269,26 +282,33 @@ private fun OnboardingPageContent(
             color = Color.White,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.ExtraBold,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 2,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = page.description,
             color = Color.White.copy(alpha = 0.82f),
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            style = MaterialTheme.typography.bodyMedium,
+            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+            maxLines = 3,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
     }
 }
 
 @Composable
-private fun PagerDots(
+private fun PermissionPagerDots(
     pageCount: Int,
     currentPage: Int,
     currentAccent: Color
@@ -306,7 +326,7 @@ private fun PagerDots(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMedium
                 ),
-                label = "dot_width"
+                label = "permission_dot_width"
             )
 
             Box(
@@ -325,7 +345,7 @@ private fun PagerDots(
 }
 
 @Composable
-private fun SoftBackgroundGlow(
+private fun SoftPermissionGlow(
     modifier: Modifier = Modifier,
     color: Color
 ) {
