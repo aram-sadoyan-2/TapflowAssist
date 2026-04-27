@@ -10,25 +10,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.algorithm.tapflow.assist.ui.theme.PrimaryBlue
-import com.algorithm.tapflow.assist.ui.theme.TextPrimary
-
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 @Composable
 fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp),
-        shape = RoundedCornerShape(20.dp),
+            .height(46.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = PrimaryBlue,
-            contentColor = TextPrimary
+            contentColor = Color.White,
+            disabledContainerColor = PrimaryBlue.copy(alpha = 0.45f),
+            disabledContentColor = Color.White.copy(alpha = 0.65f)
         )
     ) {
-        Text(text = text)
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }

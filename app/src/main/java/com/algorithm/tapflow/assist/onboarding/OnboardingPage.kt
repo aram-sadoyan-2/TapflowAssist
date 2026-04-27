@@ -74,30 +74,30 @@ fun OnboardingScreen(
     val pages = remember {
         listOf(
             OnboardingPage(
-                title = "Create Tap Presets",
-                description = "Set tap points, intervals, and repeat counts for your own automation flow.",
-                imageRes = R.drawable.app_icon,
+                title = "Start With a New Setup",
+                description = "Create your first automation setup and manage saved presets anytime.",
+                imageRes = R.drawable.tutorial_1,
                 accentStart = Color(0xFF42A5FF),
                 accentEnd = Color(0xFF7C3DFF)
             ),
             OnboardingPage(
-                title = "Place Points Anywhere",
-                description = "Drag numbered touch points exactly where you want taps to happen.",
-                imageRes = R.drawable.app_icon,
+                title = "Set Up Touch Points",
+                description = "Open overlay mode to place tap points exactly where you need them.",
+                imageRes = R.drawable.tutorial_2,
                 accentStart = Color(0xFF8B5CFF),
                 accentEnd = Color(0xFFC45CFF)
             ),
             OnboardingPage(
-                title = "Control From Overlay",
-                description = "Start, pause, or stop your preset anytime from the floating menu.",
-                imageRes = R.drawable.app_icon,
+                title = "Place Points Over Apps",
+                description = "Drag numbered points on top of other apps before running your preset.",
+                imageRes = R.drawable.tutorial3,
                 accentStart = Color(0xFF3D9BFF),
                 accentEnd = Color(0xFF3C6DFF)
             ),
             OnboardingPage(
-                title = "You Stay in Control",
-                description = "TapFlow Assist only runs presets you create and start yourself.",
-                imageRes = R.drawable.app_icon,
+                title = "Control When It Runs",
+                description = "Start, pause, or stop your preset anytime from the floating controls.",
+                imageRes = R.drawable.tutorial4,
                 accentStart = Color(0xFF506DFF),
                 accentEnd = Color(0xFFB65CFF)
             )
@@ -164,9 +164,8 @@ fun OnboardingScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) { pageIndex ->
-
                 OnboardingPageContent(
-                    page = pages[pageIndex],
+                    page = pages[pageIndex]
                 )
             }
 
@@ -176,7 +175,7 @@ fun OnboardingScreen(
                 currentAccent = pages[currentPage].accentStart
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Button(
                 onClick = {
@@ -190,7 +189,7 @@ fun OnboardingScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp)
+                    .height(58.dp)
                     .shadow(
                         elevation = 18.dp,
                         shape = RoundedCornerShape(18.dp),
@@ -223,9 +222,8 @@ fun OnboardingScreen(
 
 @Composable
 private fun OnboardingPageContent(
-    page: OnboardingPage,
+    page: OnboardingPage
 ) {
-
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -233,12 +231,13 @@ private fun OnboardingPageContent(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 18.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
+                    .fillMaxWidth(0.70f)
                     .aspectRatio(0.54f),
                 contentAlignment = Alignment.Center
             ) {
@@ -252,20 +251,18 @@ private fun OnboardingPageContent(
                     contentDescription = page.title,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(38.dp))
+                        .clip(RoundedCornerShape(34.dp))
                         .border(
                             border = BorderStroke(
                                 width = 1.dp,
                                 color = Color.White.copy(alpha = 0.14f)
                             ),
-                            shape = RoundedCornerShape(38.dp)
+                            shape = RoundedCornerShape(34.dp)
                         ),
                     contentScale = ContentScale.Fit
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(26.dp))
 
         Text(
             text = page.title,
@@ -275,7 +272,7 @@ private fun OnboardingPageContent(
             style = MaterialTheme.typography.headlineSmall
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = page.description,
@@ -286,7 +283,7 @@ private fun OnboardingPageContent(
             modifier = Modifier.padding(horizontal = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -334,12 +331,12 @@ private fun SoftBackgroundGlow(
 ) {
     Box(
         modifier = modifier
-            .size(260.dp)
+            .size(240.dp)
             .blur(70.dp)
             .background(
                 Brush.radialGradient(
                     colors = listOf(
-                        color.copy(alpha = 0.42f),
+                        color.copy(alpha = 0.40f),
                         color.copy(alpha = 0.12f),
                         Color.Transparent
                     )
