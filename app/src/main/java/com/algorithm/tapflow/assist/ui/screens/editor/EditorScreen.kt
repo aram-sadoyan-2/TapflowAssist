@@ -1,7 +1,11 @@
 package com.algorithm.tapflow.assist.ui.screens.editor
 
+import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +31,14 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,7 +47,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.algorithm.tapflow.assist.data.model.GestureType
+import com.algorithm.tapflow.assist.data.model.TouchPoint
 import com.algorithm.tapflow.assist.overlay.OverlaySavedPointsReader
+import com.algorithm.tapflow.assist.overlay.OverlaySavedPointsStore
 import com.algorithm.tapflow.assist.overlay.OverlaySetupService
 import com.algorithm.tapflow.assist.overlay.OverlaySetupSession
 import com.algorithm.tapflow.assist.overlay.OverlayStarter
@@ -51,11 +64,6 @@ import com.algorithm.tapflow.assist.ui.theme.PrimaryBlue
 import com.algorithm.tapflow.assist.ui.theme.TextPrimary
 import com.algorithm.tapflow.assist.ui.theme.TextSecondary
 import com.algorithm.tapflow.assist.ui.viewmodel.EditorViewModel
-import android.app.Activity
-import android.os.Handler
-import android.os.Looper
-import com.algorithm.tapflow.assist.data.model.TouchPoint
-import com.algorithm.tapflow.assist.overlay.OverlaySavedPointsStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,220 +119,268 @@ fun EditorScreen(
         }
 
         lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppBackground)
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        AppTopBar(
-            title = if ((presetId ?: 0L) > 0L) "Edit Preset" else "New Preset",
-            showBack = true,
-            onBack = onBack
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.isLoading) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Loading preset...",
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            return
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            item {
+            AppTopBar(
+                title = if ((presetId ?: 0L) > 0L) "Edit Preset" else "New Preset",
+                showBack = true,
+                onBack = onBack
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (uiState.isLoading) {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Point Setup",
+                        text = "Loading preset...",
                         color = TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Open overlay mode to place points above other apps.",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Configured points: ${uiState.points.size}",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    PrimaryButton(
-                        text = "Setup Points Over Apps",
-                        onClick = {
-                            if (!OverlayStarter.canDrawOverlays(context)) {
-                                OverlayStarter.openOverlayPermission(context)
-                            } else {
-                                OverlaySetupSession.reset()
-                                OverlaySetupSession.setGestureType(uiState.type)
-
-                                uiState.points.forEach { point ->
-                                    OverlaySetupSession.addPoint(
-                                        defaultX = point.x.toInt(),
-                                        defaultY = point.y.toInt()
-                                    )
-                                }
-
-                                if (uiState.points.isEmpty()) {
-                                    OverlaySetupSession.addPoint(300, 500)
-                                }
-
-                                OverlayStarter.startOverlay(context)
-
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    (context as? Activity)?.moveTaskToBack(true)
-                                }, 200)
-                            }
-                        }
-                    )
                 }
+                return@Column
             }
 
-            item {
-                GlassCard {
-                    SectionTitle(text = "Preset Details")
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.White,
+                                    0.82f to Color.White,
+                                    1.00f to Color.Transparent
+                                ),
+                                startY = 0f,
+                                endY = size.height
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    },
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Point Setup",
+                            color = TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                    OutlinedTextField(
-                        value = uiState.name,
-                        onValueChange = viewModel::updateName,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Preset name") },
-                        colors = fieldColors()
-                    )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Open overlay mode to place points above other apps.",
+                            color = TextSecondary,
+                            fontSize = 14.sp
+                        )
 
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
-                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Configured points: ${uiState.points.size}",
+                            color = TextSecondary,
+                            fontSize = 14.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        PrimaryButton(
+                            text = "Setup Points Over Apps",
+                            onClick = {
+                                if (!OverlayStarter.canDrawOverlays(context)) {
+                                    OverlayStarter.openOverlayPermission(context)
+                                } else {
+                                    OverlaySetupSession.reset()
+                                    OverlaySetupSession.setGestureType(uiState.type)
+
+                                    uiState.points.forEach { point ->
+                                        OverlaySetupSession.addPoint(
+                                            defaultX = point.x.toInt(),
+                                            defaultY = point.y.toInt()
+                                        )
+                                    }
+
+                                    if (uiState.points.isEmpty()) {
+                                        OverlaySetupSession.addPoint(300, 500)
+                                    }
+
+                                    OverlayStarter.startOverlay(context)
+
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        (context as? Activity)?.moveTaskToBack(true)
+                                    }, 200)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    GlassCard {
+                        SectionTitle(text = "Preset Details")
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
                         OutlinedTextField(
-                            value = uiState.type.name.replace("_", " "),
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            label = { Text("Gesture type") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            },
+                            value = uiState.name,
+                            onValueChange = viewModel::updateName,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Preset name") },
                             colors = fieldColors()
                         )
 
-                        ExposedDropdownMenu(
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        ExposedDropdownMenuBox(
                             expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            onExpandedChange = { expanded = !expanded }
                         ) {
-                            GestureType.entries.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type.name.replace("_", " ")) },
-                                    onClick = {
-                                        viewModel.updateType(type)
-                                        expanded = false
-                                    }
+                            OutlinedTextField(
+                                value = uiState.type.name.replace("_", " "),
+                                onValueChange = {},
+                                readOnly = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                label = { Text("Gesture type") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                },
+                                colors = fieldColors()
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                GestureType.entries.forEach { type ->
+                                    DropdownMenuItem(
+                                        text = { Text(type.name.replace("_", " ")) },
+                                        onClick = {
+                                            viewModel.updateType(type)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = uiState.intervalMs,
+                            onValueChange = viewModel::updateInterval,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Interval (ms)") },
+                            colors = fieldColors()
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = uiState.repeatCount,
+                            onValueChange = viewModel::updateRepeat,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Repeat count") },
+                            colors = fieldColors()
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = uiState.holdDurationMs,
+                            onValueChange = viewModel::updateHold,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Hold duration (ms)") },
+                            colors = fieldColors()
+                        )
+                    }
+                }
+
+                item {
+                    GlassCard {
+                        SectionTitle(text = "Touch Points")
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        if (uiState.points.isEmpty()) {
+                            Text(
+                                text = "No points added yet.",
+                                color = TextSecondary
+                            )
+                        } else {
+                            uiState.points.forEachIndexed { index, point ->
+                                val displayIndex = when (uiState.type) {
+                                    GestureType.SWIPE -> index + 1
+                                    else -> 1
+                                }
+
+                                TouchPointItem(
+                                    index = displayIndex,
+                                    point = point
                                 )
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = uiState.intervalMs,
-                        onValueChange = viewModel::updateInterval,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Interval (ms)") },
-                        colors = fieldColors()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = uiState.repeatCount,
-                        onValueChange = viewModel::updateRepeat,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Repeat count") },
-                        colors = fieldColors()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = uiState.holdDurationMs,
-                        onValueChange = viewModel::updateHold,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Hold duration (ms)") },
-                        colors = fieldColors()
-                    )
                 }
-            }
 
-            item {
-                GlassCard {
-                    SectionTitle(text = "Touch Points")
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (uiState.points.isEmpty()) {
+                item {
+                    if (uiState.errorMessage != null) {
                         Text(
-                            text = "No points added yet.",
-                            color = TextSecondary
+                            text = uiState.errorMessage ?: "",
+                            color = Color.Red,
+                            fontSize = 14.sp
                         )
-                    } else {
-                        uiState.points.forEachIndexed { index, point ->
-                            val displayIndex = when (uiState.type) {
-                                GestureType.SWIPE -> index + 1
-                                else -> 1
-                            }
-
-                            TouchPointItem(
-                                index = displayIndex,
-                                point = point
-                            )
-                        }
                     }
                 }
-            }
 
-            item {
-                if (uiState.errorMessage != null) {
-                    Text(
-                        text = uiState.errorMessage ?: "",
-                        color = androidx.compose.ui.graphics.Color.Red,
-                        fontSize = 14.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                item {
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
+            }
+        }
 
+        if (!uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.Transparent,
+                                0.55f to AppBackground.copy(alpha = 0.78f),
+                                1.00f to AppBackground
+                            )
+                        )
+                    )
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp, bottom = 8.dp)
+            ) {
                 PrimaryButton(
                     text = if (uiState.isSaving) "Saving..." else "Save Preset",
                     onClick = {
@@ -333,10 +389,6 @@ fun EditorScreen(
                         }
                     }
                 )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
